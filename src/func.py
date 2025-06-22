@@ -1,5 +1,7 @@
 from textnode import *
 
+from blocks import *
+
 import re
 
 
@@ -99,6 +101,64 @@ def text_to_textnodes(text):
 
 
 def markdown_to_blocks(markdown):
-    pass
+    block_list = []
+    if markdown == "":
+        return block_list
+    blocks = markdown.split("\n\n")
+    for block in blocks:
+        stripped_block = block.strip()
+        if stripped_block != "":
+            block_list.append(stripped_block)
+    return block_list
 
 
+def block_type_to_html(block_type, block_text):
+    match block_type:
+        case BlockType.PARAGRAPH:
+            return "p"
+        case BlockType.HEADING:
+            split_text = block_text.split()
+            return f"h{len(split_text[0])}"
+        case BlockType.CODE:
+            return "pre"
+        case BlockType.QUOTE:
+            return "blockquote"
+        case BlockType.UNORDERED_LIST:
+            return "ul"
+        case BlockType.ORDERED_LIST:
+            return "ol"
+
+
+
+def text_to_children(block):
+    child_list = []
+    text_node_list = text_to_textnodes(block)
+    for text_node in text_node_list:
+        child_node = text_node_to_html_node(text_node)
+        child_list.append(child_node)
+    return child_list
+
+
+
+print(text_to_children("this is a **bold** and _italic_ text"))
+
+
+def markdown_to_html_node(markdown):
+    markdown_blocks = markdown_to_blocks(markdown)
+    node_list = []
+    for block in markdown_blocks:
+        block_type = block_to_block_type(block)
+        if block_type == BlockType.CODE:
+            block_html_node = ParentNode("pre", children=[HTMLNode("code", value=block)])
+            node_list.append(block_html_node)
+        elif block_type in (BlockType.PARAGRAPH, BlockType.HEADING, BlockType.QUOTE):
+            block_line = block.replace("\n", " ")
+            html_tag = block_type_to_html(block_type, block)
+            block_html_node = ParentNode(html_tag, children=text_to_children(block_line), props={})
+            node_list.append(block_html_node)
+        else:
+            html_tag = block_type_to_html(block_type, block)
+            block_html_node = ParentNode(html_tag, children=text_to_children(block), props={})
+            node_list.append(block_html_node)
+    return ParentNode("div", children=node_list)
+    
